@@ -1,13 +1,27 @@
 "# ai_embedded_assistant" 
+Platform Setup
 
-Prerequisition:
+Install Dependencies:
+Create a virtual environment: python -m venv venv
+Activate it: source venv/bin/activate (Linux/Mac) or venv\Scripts\activate (Windows)
+Install packages: pip install pdfplumber nltk sentence-transformers chromadb streamlit spacy requests
+Download NLTK data: Run import nltk; nltk.download('punkt') in Python
+Download spaCy model: python -m spacy download en_core_web_sm
 
-- Python 3.9 or later installed.
-- Installed dependencies: pip install pdfplumber nltk sentence-transformers chromadb streamlit spacy requests
-- Downloaded NLTK data: import nltk; nltk.download('punkt')
-- Installed spaCy’s small English model: python -m spacy download en_core_web_sm
-- Installed and started Ollama with Mistral-7B loaded: ollama serve & and ollama run mistral
-- Created a project folder with a documents/ subfolder containing your PDF files.
+Install and Run Ollama:
+Download Ollama from this website.
+Follow installation instructions for your OS, then run ollama serve & in the background.
+Start Mistral-7B: ollama run mistral (this may take time initially to download).
+
+Prepare Documents:
+Create a documents/ folder in your project directory and place your PDFs there.
+
+Run Preprocessing:
+Execute python preprocess.py to process documents, apply semantic enrichment, embed chunks, and store in Chroma.
+
+Run the UI:
+Start the Streamlit app with streamlit run app.py.
+Open this website in your browser to interact with the chatbot.
 
 =================================================================
 
