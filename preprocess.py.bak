@@ -5,7 +5,6 @@ import spacy
 from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.config import Settings
-from docx import Document  # For handling .doc and .docx files
 
 # Initialize tools
 nlp = spacy.load("en_core_web_sm")  # Load spaCy for semantic enrichment
@@ -26,7 +25,7 @@ def semantic_enrichment(text):
     enriched_text = f"{text} [Semantic Terms: {', '.join(semantic_terms)}]"
     return enriched_text
 
-# Function to extract text from a PDF file
+# Function to extract and chunk text from a PDF
 def process_pdf(pdf_path):
     chunks = []
     with pdfplumber.open(pdf_path) as pdf:
@@ -48,50 +47,7 @@ def process_pdf(pdf_path):
                     chunks.append(chunk.strip())
     return chunks
 
-# Function to extract text from a DOC or DOCX file
-def process_docx(docx_path):
-    chunks = []
-    doc = Document(docx_path)
-    text = ""
-    # Extract text from all paragraphs
-    for para in doc.paragraphs:
-        if para.text.strip():
-            text += para.text + "\n"
-    # Split into chunks similar to PDF processing
-    if text:
-        sentences = nltk.sent_tokenize(text)
-        chunk = ""
-        for sentence in sentences:
-            if len(chunk.split()) + len(sentence.split()) <= 300:
-                chunk += " " + sentence
-            else:
-                if chunk:
-                    chunks.append(chunk.strip())
-                chunk = sentence
-        if chunk:
-            chunks.append(chunk.strip())
-    return chunks
-
-# Function to extract text from a TXT file
-def process_txt(txt_path):
-    chunks = []
-    with open(txt_path, 'r', encoding='utf-8') as file:
-        text = file.read()
-    if text:
-        sentences = nltk.sent_tokenize(text)
-        chunk = ""
-        for sentence in sentences:
-            if len(chunk.split()) + len(sentence.split()) <= 300:
-                chunk += " " + sentence
-            else:
-                if chunk:
-                    chunks.append(chunk.strip())
-                chunk = sentence
-        if chunk:
-            chunks.append(chunk.strip())
-    return chunks
-
-# Main function to preprocess all supported files in the documents folder
+# Main function to preprocess all PDFs in the documents folder
 def preprocess_documents():
     pdf_dir = "./documents"
     all_chunks = []  # Original chunks for retrieval
@@ -99,30 +55,20 @@ def preprocess_documents():
     chunk_ids = []  # Unique IDs for each chunk
     doc_ids = []  # Document names for metadata
 
-    # Process each file based on its extension
-    for idx, file_name in enumerate(os.listdir(pdf_dir)):
-        file_path = os.path.join(pdf_dir, file_name)
-        print(f"Processing {file_name}...")
-        
-        # Determine file type and process accordingly
-        if file_name.endswith(".pdf"):
-            chunks = process_pdf(file_path)
-        elif file_name.endswith((".doc", ".docx")):
-            chunks = process_docx(file_path)
-        elif file_name.endswith(".txt"):
-            chunks = process_txt(file_path)
-        else:
-            print(f"Skipping unsupported file: {file_name}")
-            continue
-
-        # Enrich and store each chunk
-        for chunk_idx, chunk in enumerate(chunks):
-            chunk_id = f"{file_name}_{chunk_idx}"
-            enriched_chunk = semantic_enrichment(chunk)
-            all_chunks.append(chunk)
-            enriched_chunks.append(enriched_chunk)
-            chunk_ids.append(chunk_id)
-            doc_ids.append(file_name)
+    # Process each PDF
+    for idx, pdf_file in enumerate(os.listdir(pdf_dir)):
+        if pdf_file.endswith(".pdf"):
+            pdf_path = os.path.join(pdf_dir, pdf_file)
+            print(f"Processing {pdf_file}...")
+            chunks = process_pdf(pdf_path)
+            # Enrich and store each chunk
+            for chunk_idx, chunk in enumerate(chunks):
+                chunk_id = f"{pdf_file}_{chunk_idx}"
+                enriched_chunk = semantic_enrichment(chunk)
+                all_chunks.append(chunk)
+                enriched_chunks.append(enriched_chunk)
+                chunk_ids.append(chunk_id)
+                doc_ids.append(pdf_file)
 
     # Embed enriched chunks
     print("Embedding enriched chunks...")

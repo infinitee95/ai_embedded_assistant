@@ -25,6 +25,7 @@ ollama run mistral
 streamlit run app.py
 
 =================================================================
+
 Description
 
 documents/: Place all your PDF files here (e.g., whitepaper1.pdf, ebook2.pdf). The preprocess.py script will read and process these files.

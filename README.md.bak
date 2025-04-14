@@ -23,3 +23,12 @@ ollama run mistral
 
 4. Run app.py to launch the Streamlit UI and start using the chatbot:
 streamlit run app.py
+
+=================================================================
+Description
+
+documents/: Place all your PDF files here (e.g., whitepaper1.pdf, ebook2.pdf). The preprocess.py script will read and process these files.
+embeddings/: This folder is automatically created when you run preprocess.py. It stores the Chroma vector database with the embeddings of your document chunks, so you don’t need to create it manually.
+preprocess.py: This script processes the PDFs, extracts text, chunks it, applies semantic enrichment, embeds the chunks, and stores them in Chroma.
+query.py: This handles user queries, retrieves relevant document chunks from Chroma, and generates answers using the Mistral-7B model via Ollama.
+app.py: This sets up the Streamlit web interface, letting you interact with the chatbot through a browser.
