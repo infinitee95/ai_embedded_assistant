@@ -75,10 +75,17 @@ User Query: {query}
 Answer in detail:"""
 
     try:
-        response = requests.post("http://localhost:11434/api/generate", json={"model": "mistral", "prompt": prompt})
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={"model": "mistral", "prompt": prompt, "max_tokens": 300},
+            timeout=60
+        )
         response.raise_for_status()
         answer = response.json()["response"]
         logging.info(f"Ollama answer generation completed in {time.time() - step_start:.2f} seconds")
+    except requests.exceptions.Timeout:
+        answer = "Error: Ollama request timed out after 60 seconds. Try a smaller model or reduce the context size."
+        logging.error("Ollama request timed out")
     except requests.exceptions.RequestException as e:
         answer = f"Error: Could not connect to Ollama. Ensure Ollama is running and Mistral-7B is loaded. Details: {e}"
         logging.error(f"Ollama request failed: {e}")

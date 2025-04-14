@@ -1,12 +1,6 @@
 import streamlit as st
 from query import process_query
-import asyncio
 import time
-
-# Ensure an event loop is available (from previous fix)
-if not asyncio.get_event_loop_policy().get_event_loop():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
 
 # Streamlit app setup
 st.title("Document Assistant with Semantic Layer")
