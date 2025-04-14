@@ -3,6 +3,11 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.config import Settings
 import requests
+import time
+import logging
+
+# Set up logging to print timestamps and step durations
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize tools
 nlp = spacy.load("en_core_web_sm")  # Load spaCy for semantic enrichment
@@ -19,22 +24,49 @@ def semantic_enrichment(text):
     enriched_text = f"{text} [Semantic Terms: {', '.join(semantic_terms)}]"
     return enriched_text
 
-# Function to process a user query
-def process_query(query, k=5):
-    # Enrich the query
-    enriched_query = semantic_enrichment(query)
-    # Embed the enriched query
-    query_embedding = model.encode([enriched_query])[0]
+# Function to process a user query with progress updates
+def process_query(query, k=5, status=None):
+    start_time = time.time()
 
-    # Retrieve top-k relevant chunks from Chroma
+    # Step 1: Enrich the query
+    if status:
+        status.update(label="Step 1: Enriching query with semantic terms...")
+    logging.info("Starting query enrichment...")
+    step_start = time.time()
+    enriched_query = semantic_enrichment(query)
+    logging.info(f"Query enrichment completed in {time.time() - step_start:.2f} seconds")
+
+    # Step 2: Embed the enriched query
+    if status:
+        status.update(label="Step 2: Embedding the query...")
+    logging.info("Starting query embedding...")
+    step_start = time.time()
+    query_embedding = model.encode([enriched_query])[0]
+    logging.info(f"Query embedding completed in {time.time() - step_start:.2f} seconds")
+
+    # Step 3: Retrieve top-k relevant chunks from Chroma
+    if status:
+        status.update(label="Step 3: Retrieving relevant document chunks...")
+    logging.info("Starting Chroma retrieval...")
+    step_start = time.time()
     results = collection.query(query_embeddings=[query_embedding], n_results=k)
     retrieved_chunks = results["documents"][0]
     metadata = results["metadatas"][0]
+    logging.info(f"Chroma retrieval completed in {time.time() - step_start:.2f} seconds")
 
-    # Build context from retrieved chunks
+    # Step 4: Build context from retrieved chunks
+    if status:
+        status.update(label="Step 4: Building context for answer generation...")
+    logging.info("Building context...")
+    step_start = time.time()
     context = "\n\n".join([f"Excerpt from {meta['document']}:\n{chunk}" for chunk, meta in zip(retrieved_chunks, metadata)])
+    logging.info(f"Context building completed in {time.time() - step_start:.2f} seconds")
 
-    # Create prompt for Mistral-7B
+    # Step 5: Generate answer using Ollama
+    if status:
+        status.update(label="Step 5: Generating answer with Mistral-7B (this may take a while)...")
+    logging.info("Sending request to Ollama for answer generation...")
+    step_start = time.time()
     prompt = f"""System: You are an expert assistant. Answer the question using only the provided document excerpts.
 Document Excerpts:
 {context}
@@ -42,13 +74,17 @@ Document Excerpts:
 User Query: {query}
 Answer in detail:"""
 
-    # Send request to Ollama API
     try:
         response = requests.post("http://localhost:11434/api/generate", json={"model": "mistral", "prompt": prompt})
         response.raise_for_status()
         answer = response.json()["response"]
+        logging.info(f"Ollama answer generation completed in {time.time() - step_start:.2f} seconds")
     except requests.exceptions.RequestException as e:
         answer = f"Error: Could not connect to Ollama. Ensure Ollama is running and Mistral-7B is loaded. Details: {e}"
+        logging.error(f"Ollama request failed: {e}")
+
+    # Log total processing time
+    logging.info(f"Total query processing time: {time.time() - start_time:.2f} seconds")
 
     return answer, retrieved_chunks, metadata
 
