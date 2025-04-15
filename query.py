@@ -65,7 +65,8 @@ def process_query(query, k=2, status=None):
 
     # Step 5: Generate answer using Ollama
     if status:
-        status.update(label="Step 5: Generating answer with Mistral-7B (this may take a while)...")
+        # status.update(label="Step 5: Generating answer with Mistral-7B (this may take a while)...")
+        status.update(label="Step 5: Generating answer with Phi-3 (this may take a while)...")
     logging.info("Sending request to Ollama for answer generation...")
     step_start = time.time()
     prompt = f"""System: You are an expert assistant. Answer the question using only the provided document excerpts.
@@ -75,7 +76,8 @@ Document Excerpts:
 User Query: {query}
 Answer in detail:"""
     logging.info(f"Prompt length: {len(prompt.split())} words")
-    logging.info(f"Request payload: {{\"model\": \"mistral\", \"prompt\": \"[truncated for logging]\", \"max_tokens\": 300}}")
+    # logging.info(f"Request payload: {{\"model\": \"mistral\", \"prompt\": \"[truncated for logging]\", \"max_tokens\": 300}}")
+    logging.info(f"Request payload: {{\"model\": \"phi3\", \"prompt\": \"[truncated for logging]\", \"max_tokens\": 150}}")
 
     try:
         # Test Ollama connectivity before sending the main request
@@ -92,7 +94,7 @@ Answer in detail:"""
         # )
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": "phi3", "prompt": prompt, "max_tokens": 300}
+            json={"model": "phi3", "prompt": prompt, "max_tokens": 150}
         )
         response.raise_for_status()
         answer = response.json()["response"]
