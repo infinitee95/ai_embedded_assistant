@@ -25,7 +25,7 @@ def semantic_enrichment(text):
     return enriched_text
 
 # Function to process a user query with progress updates
-def process_query(query, k=5, status=None):
+def process_query(query, k=2, status=None):
     start_time = time.time()
 
     # Step 1: Enrich the query
@@ -61,6 +61,7 @@ def process_query(query, k=5, status=None):
     step_start = time.time()
     context = "\n\n".join([f"Excerpt from {meta['document']}:\n{chunk}" for chunk, meta in zip(retrieved_chunks, metadata)])
     logging.info(f"Context building completed in {time.time() - step_start:.2f} seconds")
+    logging.info(f"Context length: {len(context.split())} words")
 
     # Step 5: Generate answer using Ollama
     if status:
@@ -73,11 +74,22 @@ Document Excerpts:
 
 User Query: {query}
 Answer in detail:"""
+    logging.info(f"Prompt length: {len(prompt.split())} words")
+    logging.info(f"Request payload: {{\"model\": \"mistral\", \"prompt\": \"[truncated for logging]\", \"max_tokens\": 300}}")
 
     try:
+        # Test Ollama connectivity before sending the main request
+        logging.info("Testing Ollama server connectivity...")
+        test_response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        test_response.raise_for_status()
+        logging.info("Ollama server is reachable")
+
+        # Send the main request
+        logging.info("Sending main request to Ollama...")
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": "mistral", "prompt": prompt, "max_tokens": 300}
+            json={"model": "mistral", "prompt": prompt, "max_tokens": 300},
+            timeout=60
         )
         response.raise_for_status()
         answer = response.json()["response"]
@@ -85,8 +97,11 @@ Answer in detail:"""
     except requests.exceptions.Timeout:
         answer = "Error: Ollama request timed out after 60 seconds. Try a smaller model or reduce the context size."
         logging.error("Ollama request timed out")
+    except requests.exceptions.ConnectionError as e:
+        answer = f"Error: Could not connect to Ollama server. Ensure Ollama is running on localhost:11434. Details: {e}"
+        logging.error(f"Ollama connection failed: {e}")
     except requests.exceptions.RequestException as e:
-        answer = f"Error: Could not connect to Ollama. Ensure Ollama is running and Mistral-7B is loaded. Details: {e}"
+        answer = f"Error: Ollama request failed. Ensure Mistral-7B is loaded and Ollama is functioning. Details: {e}"
         logging.error(f"Ollama request failed: {e}")
 
     # Log total processing time

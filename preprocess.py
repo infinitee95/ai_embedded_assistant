@@ -36,9 +36,9 @@ def process_pdf(pdf_path):
                 # Split text into sentences
                 sentences = nltk.sent_tokenize(text)
                 chunk = ""
-                # Group sentences into chunks of ~300 tokens
+                # Group sentences into chunks of ~150 tokens
                 for sentence in sentences:
-                    if len(chunk.split()) + len(sentence.split()) <= 300:
+                    if len(chunk.split()) + len(sentence.split()) <= 150:
                         chunk += " " + sentence
                     else:
                         if chunk:
@@ -62,7 +62,7 @@ def process_docx(docx_path):
         sentences = nltk.sent_tokenize(text)
         chunk = ""
         for sentence in sentences:
-            if len(chunk.split()) + len(sentence.split()) <= 300:
+            if len(chunk.split()) + len(sentence.split()) <= 150:
                 chunk += " " + sentence
             else:
                 if chunk:
@@ -81,7 +81,7 @@ def process_txt(txt_path):
         sentences = nltk.sent_tokenize(text)
         chunk = ""
         for sentence in sentences:
-            if len(chunk.split()) + len(sentence.split()) <= 300:
+            if len(chunk.split()) + len(sentence.split()) <= 150:
                 chunk += " " + sentence
             else:
                 if chunk:
