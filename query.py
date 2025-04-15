@@ -77,8 +77,7 @@ Answer in detail:"""
     try:
         response = requests.post(
             "http://localhost:11434/api/generate",
-            json={"model": "mistral", "prompt": prompt, "max_tokens": 300},
-            timeout=60
+            json={"model": "mistral", "prompt": prompt, "max_tokens": 300}
         )
         response.raise_for_status()
         answer = response.json()["response"]
