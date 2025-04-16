@@ -97,7 +97,7 @@ Answer in detail:"""
         }
         logging.info("Sending request to Hugging Face API at %s...", time.strftime('%Y-%m-%d %H:%M:%S'))
         response = requests.post(
-            "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+            "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct",
             headers=headers,
             json=payload,
             timeout=60
