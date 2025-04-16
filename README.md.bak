@@ -38,13 +38,6 @@ ollama run mistral
 4. Run app.py to launch the Streamlit UI and start using the chatbot:
 streamlit run app.py
 
-----------------------------
-If using HuggingFace API:
-export XAI_API_KEY="your-api-key-here"
-
-export STREAMLIT_OPT_OUT_OF_REPORTING=true
-streamlit run app.py --server.fileWatcherType none
-
 =================================================================
 
 Description
