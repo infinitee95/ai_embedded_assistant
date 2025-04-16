@@ -69,9 +69,9 @@ def process_query(query, k=1, status=None):
     context = " ".join(context.split()[:100])  # Truncate to 100 words
     logging.info(f"Truncated context length: {len(context.split())} words")
 
-    # Step 5: Generate answer using Hugging Face Inference API
+    # Step 5: Generate answer using Hugging Face Inference API (Mistral-7B-Instruct-v0.1)
     if status:
-        status.update(label="Step 5: Generating answer with Hugging Face API...")
+        status.update(label="Step 5: Generating answer with Mistral-7B (Hugging Face API)...")
     logging.info("Sending request to Hugging Face API for answer generation...")
     step_start = time.time()
     prompt = f"""System: You are an expert assistant. Answer the question using only the provided document excerpts.
@@ -100,10 +100,16 @@ Answer in detail:"""
             "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
             headers=headers,
             json=payload,
-            timeout=60
+            timeout=30
         )
         response.raise_for_status()
-        answer = response.json()[0]["generated_text"].split("Answer in detail:")[1].strip()
+        # Parse the response, ensuring robustness in case Mistral's output format differs
+        generated_text = response.json()[0]["generated_text"]
+        # Look for "Answer in detail:" or take the entire response if not present
+        if "Answer in detail:" in generated_text:
+            answer = generated_text.split("Answer in detail:")[1].strip()
+        else:
+            answer = generated_text.strip()  # Fallback to the entire response
         logging.info(f"Hugging Face API answer generation completed in {time.time() - step_start:.2f} seconds")
     except requests.exceptions.Timeout:
         answer = "Error: Hugging Face API request timed out after 30 seconds. Check your internet connection or API status."
@@ -127,4 +133,4 @@ if __name__ == "__main__":
     print("Answer:", answer)
     print("\nSources:")
     for chunk, meta in zip(chunks, metadata):
-        print(f"- {meta['document']}: {chunk[:500]}...")
+        print(f"- {meta['document']}: {chunk[:100]}...")
