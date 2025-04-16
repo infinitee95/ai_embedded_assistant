@@ -5,7 +5,6 @@ from chromadb.config import Settings
 import requests
 import time
 import logging
-import os
 
 # Set up logging to print timestamps and step durations
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -15,11 +14,6 @@ nlp = spacy.load("en_core_web_sm")  # Load spaCy for semantic enrichment
 model = SentenceTransformer('all-MiniLM-L6-v2')  # Load embedding model
 client = chromadb.PersistentClient(path="./embeddings", settings=Settings())
 collection = client.get_collection(name="documents")  # Access Chroma collection
-
-# Get Hugging Face API key from environment variable
-HF_API_KEY = os.getenv("HF_API_KEY")
-if not HF_API_KEY:
-    raise ValueError("HF_API_KEY environment variable not set. Please set it before running the app.")
 
 # Semantic enrichment function (same as in preprocess.py)
 def semantic_enrichment(text):
@@ -31,7 +25,7 @@ def semantic_enrichment(text):
     return enriched_text
 
 # Function to process a user query with progress updates
-def process_query(query, k=1, status=None):
+def process_query(query, k=2, status=None):
     start_time = time.time()
 
     # Step 1: Enrich the query
@@ -66,13 +60,14 @@ def process_query(query, k=1, status=None):
     logging.info("Building context...")
     step_start = time.time()
     context = "\n\n".join([f"Excerpt from {meta['document']}:\n{chunk}" for chunk, meta in zip(retrieved_chunks, metadata)])
-    context = " ".join(context.split()[:100])  # Truncate to 100 words
-    logging.info(f"Truncated context length: {len(context.split())} words")
+    logging.info(f"Context building completed in {time.time() - step_start:.2f} seconds")
+    logging.info(f"Context length: {len(context.split())} words")
 
-    # Step 5: Generate answer using Hugging Face Inference API
+    # Step 5: Generate answer using Ollama
     if status:
-        status.update(label="Step 5: Generating answer with Hugging Face API...")
-    logging.info("Sending request to Hugging Face API for answer generation...")
+        # status.update(label="Step 5: Generating answer with Mistral-7B (this may take a while)...")
+        status.update(label="Step 5: Generating answer with Phi-3 (this may take a while)...")
+    logging.info("Sending request to Ollama for answer generation...")
     step_start = time.time()
     prompt = f"""System: You are an expert assistant. Answer the question using only the provided document excerpts.
 Document Excerpts:
@@ -80,40 +75,39 @@ Document Excerpts:
 
 User Query: {query}
 Answer in detail:"""
+    logging.info(f"Prompt length: {len(prompt.split())} words")
+    # logging.info(f"Request payload: {{\"model\": \"mistral\", \"prompt\": \"[truncated for logging]\", \"max_tokens\": 300}}")
+    logging.info(f"Request payload: {{\"model\": \"phi3\", \"prompt\": \"[truncated for logging]\", \"max_tokens\": 150}}")
 
     try:
-        logging.info(f"Prompt length: {len(prompt.split())} words")
-        headers = {
-            "Authorization": f"Bearer {HF_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": 300,
-                "temperature": 0.7,
-                "top_p": 0.9
-            }
-        }
-        logging.info("Sending request to Hugging Face API at %s...", time.strftime('%Y-%m-%d %H:%M:%S'))
+        # Test Ollama connectivity before sending the main request
+        logging.info("Testing Ollama server connectivity...")
+        test_response = requests.get("http://localhost:11434/api/tags", timeout=5)
+        test_response.raise_for_status()
+        logging.info("Ollama server is reachable")
+
+        # Send the main request
+        logging.info("Sending main request to Ollama...")
+        # response = requests.post(
+        #     "http://localhost:11434/api/generate",
+        #     json={"model": "mistral", "prompt": prompt, "max_tokens": 300}
+        # )
         response = requests.post(
-            "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct",
-            headers=headers,
-            json=payload,
-            timeout=30
+            "http://localhost:11434/api/generate",
+            json={"model": "phi3", "prompt": prompt, "max_tokens": 150}
         )
         response.raise_for_status()
-        answer = response.json()[0]["generated_text"].split("Answer in detail:")[1].strip()
-        logging.info(f"Hugging Face API answer generation completed in {time.time() - step_start:.2f} seconds")
+        answer = response.json()["response"]
+        logging.info(f"Ollama answer generation completed in {time.time() - step_start:.2f} seconds")
     except requests.exceptions.Timeout:
-        answer = "Error: Hugging Face API request timed out after 30 seconds. Check your internet connection or API status."
-        logging.error("Hugging Face API request timed out")
+        answer = "Error: Ollama request timed out after 60 seconds. Try a smaller model or reduce the context size."
+        logging.error("Ollama request timed out")
+    except requests.exceptions.ConnectionError as e:
+        answer = f"Error: Could not connect to Ollama server. Ensure Ollama is running on localhost:11434. Details: {e}"
+        logging.error(f"Ollama connection failed: {e}")
     except requests.exceptions.RequestException as e:
-        answer = f"Error: Hugging Face API request failed. Ensure your API key is valid and the model is available. Details: {e}"
-        logging.error(f"Hugging Face API request failed: {e}")
-    except (KeyError, IndexError):
-        answer = "Error: Unexpected response format from Hugging Face API."
-        logging.error("Unexpected response format from Hugging Face API")
+        answer = f"Error: Ollama request failed. Ensure Mistral-7B is loaded and Ollama is functioning. Details: {e}"
+        logging.error(f"Ollama request failed: {e}")
 
     # Log total processing time
     logging.info(f"Total query processing time: {time.time() - start_time:.2f} seconds")
