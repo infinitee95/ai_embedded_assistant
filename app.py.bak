@@ -27,6 +27,6 @@ if st.button("Ask"):
         # Display source excerpts
         st.subheader("Sources:")
         for chunk, meta in zip(chunks, metadata):
-            st.write(f"- **{meta['document']}**: {chunk[:500]}...")
+            st.write(f"- **{meta['document']}**: {chunk[:200]}...")
     else:
         st.error("Please enter a question.")
